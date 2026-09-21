@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BMO Face Web Edition</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background-color: #80ceb9; /* BMO 經典青綠色面板背景 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        canvas {
+            background-color: #80ceb9;
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="bmoCanvas"></canvas>
+
+<script>
+    const canvas = document.getElementById('bmoCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // 自動匹配 10.1 吋螢幕解析度 (例如 1280x800)
+    function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // BMO 當前狀態
+    let state = {
+        eyeYOffset: 0,
+        isBlinking: false,
+        expression: 'HAPPY' // HAPPY, SAD, SURPRISED
+    };
+
+    // 繪製 BMO 臉部
+    function drawBMO() {
+        const w = canvas.width;
+        const h = canvas.height;
+        ctx.clearRect(0, 0, w, h);
+
+        ctx.fillStyle = '#051d18'; // BMO 五官深青黑色
+        ctx.strokeStyle = '#051d18';
+        ctx.lineWidth = w * 0.012; // 隨螢幕動態縮放線寬
+        ctx.lineCap = 'round';
+
+        const eyeRadius = w * 0.035;
+        const eyeXOffset = w * 0.18;
+        const eyeY = h * 0.42;
+
+        // 1. 繪製眼睛 (眨眼邏輯)
+        if (state.isBlinking) {
+            // 眨眼時變一條橫線
+            ctx.beginPath();
+            ctx.moveTo(w/2 - eyeXOffset - eyeRadius, eyeY);
+            ctx.lineTo(w/2 - eyeXOffset + eyeRadius, eyeY);
+            ctx.moveTo(w/2 + eyeXOffset - eyeRadius, eyeY);
+            ctx.lineTo(w/2 + eyeXOffset + eyeRadius, eyeY);
+            ctx.stroke();
+        } else {
+            // 正常圓圓的大眼睛
+            ctx.beginPath();
+            ctx.arc(w/2 - eyeXOffset, eyeY, eyeRadius, 0, Math.PI * 2);
+            ctx.arc(w/2 + eyeXOffset, eyeY, eyeRadius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // 2. 繪製嘴巴 (依據表情狀態)
+        const mouthY = h * 0.58;
+        const mouthWidth = w * 0.12;
+
+        ctx.beginPath();
+        if (state.expression === 'HAPPY') {
+            // 開心弧形笑臉
+            ctx.arc(w/2, mouthY - h*0.02, mouthWidth, 0.1 * Math.PI, 0.9 * Math.PI);
+            ctx.stroke();
+        } else if (state.expression === 'SAD') {
+            // 難過倒弧形
+            ctx.arc(w/2, mouthY + h*0.05, mouthWidth, 1.1 * Math.PI, 1.9 * Math.PI);
+            ctx.stroke();
+        } else if (state.expression === 'SURPRISED') {
+            // 驚訝小圓嘴
+            ctx.arc(w/2, mouthY, mouthWidth * 0.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        requestAnimationFrame(drawBMO);
+    }
+
+    // 自動眨眼計時器 (每 3~5 秒隨機眨眼)
+    function triggerBlink() {
+        state.isBlinking = true;
+        setTimeout(() => {
+            state.isBlinking = false;
+        }, 150); // 眨眼 0.15 秒
+
+        setTimeout(triggerBlink, Math.random() * 3000 + 2000);
+    }
+
+    // 啟動繪製與眨眼循環
+    drawBMO();
+    triggerBlink();
+
+    // 支援 WebSocket 接收 ESP32-S3 控制指令
+    /*
+    const ws = new WebSocket('ws://' + location.host + '/ws');
+    ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.expression) state.expression = data.expression;
+    };
+    */
+</script>
+</body>
+</html>
