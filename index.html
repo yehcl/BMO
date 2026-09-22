@@ -67,6 +67,77 @@
             opacity: 0.6;
             line-height: 1.6;
         }
+        #editBtn {
+            position: fixed;
+            bottom: 24px;
+            right: 92px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            border: none;
+            background-color: #051d18;
+            color: #80ceb9;
+            font-size: 22px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            z-index: 10;
+        }
+        #editBtn:active { transform: scale(0.95); }
+        #editOverlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(5,29,24,0.55);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+        }
+        #editOverlay.show { display: flex; }
+        #editPanel {
+            background: #f4f1ea;
+            color: #051d18;
+            width: min(420px, 90vw);
+            max-height: 80vh;
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+        }
+        #editPanel h2 { font-size: 16px; font-weight: 600; }
+        #editPanel p { font-size: 12px; opacity: 0.7; line-height: 1.6; }
+        #editPanel select {
+            font-size: 14px;
+            padding: 8px 10px;
+            border-radius: 8px;
+            border: 1px solid #ccc4b5;
+            background: #fff;
+        }
+        #editPanel textarea {
+            font-size: 14px;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #ccc4b5;
+            resize: vertical;
+            min-height: 140px;
+            line-height: 1.6;
+            font-family: inherit;
+        }
+        #editPanel .row { display: flex; gap: 8px; justify-content: flex-end; }
+        #editPanel button.action {
+            font-size: 13px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+        }
+        #editPanel button.save { background: #051d18; color: #80ceb9; }
+        #editPanel button.reset { background: transparent; color: #051d18; text-decoration: underline; }
+        #editPanel button.close { background: #ddd6c8; color: #051d18; }
     </style>
 </head>
 <body>
@@ -75,6 +146,27 @@
 <div id="hint">鍵盤 1-5 切換表情 ／ 點擊畫面輪播 ／ 按右下角麥克風說話（切換時 BMO 會開口說話，嘴巴會動）</div>
 <div id="status"></div>
 <button id="micBtn" title="語音控制">🎤</button>
+<button id="editBtn" title="編輯台詞">📝</button>
+
+<div id="editOverlay">
+    <div id="editPanel">
+        <h2>編輯 BMO 的台詞</h2>
+        <p>每個表情可以放好幾句話，BMO 每次講話會隨機挑一句，不會老是講同一句。一行一句。</p>
+        <select id="expSelect">
+            <option value="HAPPY">開心 HAPPY</option>
+            <option value="SAD">難過 SAD</option>
+            <option value="SURPRISED">驚訝 SURPRISED</option>
+            <option value="ANGRY">生氣 ANGRY</option>
+            <option value="SLEEPY">睡覺 SLEEPY</option>
+        </select>
+        <textarea id="phraseText"></textarea>
+        <div class="row">
+            <button class="action reset" id="resetBtn">恢復預設</button>
+            <button class="action close" id="closeBtn">取消</button>
+            <button class="action save" id="saveBtn">儲存</button>
+        </div>
+    </div>
+</div>
 
 <script>
     const canvas = document.getElementById('bmoCanvas');
@@ -103,16 +195,57 @@
     }
 
     // 講話功能：BMO 開口說話時嘴巴會動，說完自動恢復原本表情的嘴型
-    const speakPhrases = {
-        HAPPY:     '我很開心！',
-        SAD:       '我好難過…',
-        SURPRISED: '哇！嚇我一跳！',
-        ANGRY:     '哼！我生氣了！',
-        SLEEPY:    '好想睡覺喔…'
+    // 每個表情準備多句台詞，每次講話隨機挑一句，使用者也可以按📝自己編輯／新增
+    const defaultPhrases = {
+        HAPPY: [
+            '我很開心！', '今天心情超好的！', '耶～超棒的！',
+            '嘿嘿，開心開心！', '有你在真好！'
+        ],
+        SAD: [
+            '我好難過…', '嗚…心情不太好…', '有點難過耶…',
+            '不要看我啦…', '我需要抱抱…'
+        ],
+        SURPRISED: [
+            '哇！嚇我一跳！', '什麼？！真的假的！', '咦？！',
+            '太意外了吧！', '哇喔，沒想到！'
+        ],
+        ANGRY: [
+            '哼！我生氣了！', '真是夠了！', '不要惹我！',
+            '氣死我了！', '哼哼，不理你了！'
+        ],
+        SLEEPY: [
+            '好想睡覺喔…', '眼皮好重…', '讓我瞇一下…',
+            '晚安，我要睡了…', '好睏喔…'
+        ]
     };
 
+    let phrasePool = loadPhrases();
+
+    function loadPhrases() {
+        try {
+            const saved = localStorage.getItem('bmo_phrases');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                // 確保每個表情都至少有預設值，避免使用者存了不完整資料
+                return Object.assign({}, defaultPhrases, parsed);
+            }
+        } catch (e) {}
+        return JSON.parse(JSON.stringify(defaultPhrases));
+    }
+
+    function savePhrases() {
+        try { localStorage.setItem('bmo_phrases', JSON.stringify(phrasePool)); }
+        catch (e) {}
+    }
+
+    function pickPhrase(expName) {
+        const list = (phrasePool[expName] && phrasePool[expName].length)
+            ? phrasePool[expName] : defaultPhrases[expName];
+        return list[Math.floor(Math.random() * list.length)];
+    }
+
     function speak(text) {
-        if (!('speechSynthesis' in window)) return;
+        if (!('speechSynthesis' in window) || !text) return;
         window.speechSynthesis.cancel(); // 避免重疊講話
         const utter = new SpeechSynthesisUtterance(text);
         utter.lang = 'zh-TW';
@@ -123,11 +256,48 @@
         window.speechSynthesis.speak(utter);
     }
 
-    // 切換表情同時開口說話
+    // 切換表情同時開口說話（隨機挑一句台詞）
     function setExpressionAndSpeak(expName) {
         setExpression(expName);
-        speak(speakPhrases[expName] || '');
+        speak(pickPhrase(expName));
     }
+
+    // ===== 編輯台詞面板 =====
+    const editBtn = document.getElementById('editBtn');
+    const editOverlay = document.getElementById('editOverlay');
+    const expSelect = document.getElementById('expSelect');
+    const phraseText = document.getElementById('phraseText');
+    const saveBtn = document.getElementById('saveBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const closeBtn = document.getElementById('closeBtn');
+
+    function loadTextareaFor(expName) {
+        const list = (phrasePool[expName] && phrasePool[expName].length)
+            ? phrasePool[expName] : defaultPhrases[expName];
+        phraseText.value = list.join('\n');
+    }
+
+    editBtn.addEventListener('click', () => {
+        loadTextareaFor(expSelect.value);
+        editOverlay.classList.add('show');
+    });
+    closeBtn.addEventListener('click', () => editOverlay.classList.remove('show'));
+    expSelect.addEventListener('change', () => loadTextareaFor(expSelect.value));
+
+    saveBtn.addEventListener('click', () => {
+        const lines = phraseText.value.split('\n').map(s => s.trim()).filter(Boolean);
+        phrasePool[expSelect.value] = lines.length ? lines : defaultPhrases[expSelect.value].slice();
+        savePhrases();
+        showStatus('台詞已儲存！');
+        editOverlay.classList.remove('show');
+    });
+
+    resetBtn.addEventListener('click', () => {
+        phrasePool[expSelect.value] = defaultPhrases[expSelect.value].slice();
+        savePhrases();
+        loadTextareaFor(expSelect.value);
+        showStatus('已恢復這個表情的預設台詞');
+    });
 
     // 繪製 BMO 臉部
     function drawBMO() {
