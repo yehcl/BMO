@@ -14,19 +14,73 @@
             height: 100vh;
             overflow: hidden;
             user-select: none;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
         }
         canvas {
             background-color: #80ceb9;
+        }
+        #micBtn {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            border: none;
+            background-color: #051d18;
+            color: #80ceb9;
+            font-size: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            transition: transform 0.15s ease, background-color 0.15s ease;
+            z-index: 10;
+        }
+        #micBtn.listening {
+            background-color: #d64545;
+            transform: scale(1.08);
+        }
+        #micBtn:active { transform: scale(0.95); }
+        #status {
+            position: fixed;
+            bottom: 32px;
+            right: 92px;
+            background: rgba(5,29,24,0.85);
+            color: #80ceb9;
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            max-width: 260px;
+        }
+        #status.show { opacity: 1; }
+        #hint {
+            position: fixed;
+            top: 16px;
+            left: 16px;
+            color: #051d18;
+            font-size: 12px;
+            opacity: 0.6;
+            line-height: 1.6;
         }
     </style>
 </head>
 <body>
 
 <canvas id="bmoCanvas"></canvas>
+<div id="hint">鍵盤 1-5 切換表情 ／ 點擊畫面輪播 ／ 按右下角麥克風說話（切換時 BMO 會開口說話，嘴巴會動）</div>
+<div id="status"></div>
+<button id="micBtn" title="語音控制">🎤</button>
 
 <script>
     const canvas = document.getElementById('bmoCanvas');
     const ctx = canvas.getContext('2d');
+    const micBtn = document.getElementById('micBtn');
+    const statusEl = document.getElementById('status');
 
     function resizeCanvas() {
         canvas.width = window.innerWidth;
@@ -38,6 +92,7 @@
     // 核心狀態管理
     let state = {
         isBlinking: false,
+        isTalking: false,   // 講話中，嘴巴會動
         expression: 'HAPPY' // 可切換：HAPPY, SAD, SURPRISED, ANGRY, SLEEPY
     };
 
@@ -45,6 +100,33 @@
     function setExpression(expName) {
         state.expression = expName;
         console.log("Current Expression:", state.expression);
+    }
+
+    // 講話功能：BMO 開口說話時嘴巴會動，說完自動恢復原本表情的嘴型
+    const speakPhrases = {
+        HAPPY:     '我很開心！',
+        SAD:       '我好難過…',
+        SURPRISED: '哇！嚇我一跳！',
+        ANGRY:     '哼！我生氣了！',
+        SLEEPY:    '好想睡覺喔…'
+    };
+
+    function speak(text) {
+        if (!('speechSynthesis' in window)) return;
+        window.speechSynthesis.cancel(); // 避免重疊講話
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.lang = 'zh-TW';
+        utter.rate = 1;
+        utter.onstart = () => { state.isTalking = true; };
+        utter.onend = () => { state.isTalking = false; };
+        utter.onerror = () => { state.isTalking = false; };
+        window.speechSynthesis.speak(utter);
+    }
+
+    // 切換表情同時開口說話
+    function setExpressionAndSpeak(expName) {
+        setExpression(expName);
+        speak(speakPhrases[expName] || '');
     }
 
     // 繪製 BMO 臉部
@@ -64,7 +146,6 @@
 
         // 1. 眼睛繪製
         if (state.isBlinking || state.expression === 'SLEEPY') {
-            // 眨眼 / 睡覺 (一條橫線)
             ctx.beginPath();
             ctx.moveTo(w/2 - eyeXOffset - eyeRadius, eyeY);
             ctx.lineTo(w/2 - eyeXOffset + eyeRadius, eyeY);
@@ -72,13 +153,11 @@
             ctx.lineTo(w/2 + eyeXOffset + eyeRadius, eyeY);
             ctx.stroke();
         } else if (state.expression === 'ANGRY') {
-            // 生氣的眼睛 (加上斜眉毛)
             ctx.beginPath();
             ctx.arc(w/2 - eyeXOffset, eyeY, eyeRadius, 0, Math.PI * 2);
             ctx.arc(w/2 + eyeXOffset, eyeY, eyeRadius, 0, Math.PI * 2);
             ctx.fill();
 
-            // 左眉毛與右眉毛
             ctx.beginPath();
             ctx.moveTo(w/2 - eyeXOffset - eyeRadius, eyeY - eyeRadius * 1.5);
             ctx.lineTo(w/2 - eyeXOffset + eyeRadius, eyeY - eyeRadius * 0.5);
@@ -86,7 +165,6 @@
             ctx.lineTo(w/2 + eyeXOffset - eyeRadius, eyeY - eyeRadius * 0.5);
             ctx.stroke();
         } else {
-            // 一般圓圓眼
             ctx.beginPath();
             ctx.arc(w/2 - eyeXOffset, eyeY, eyeRadius, 0, Math.PI * 2);
             ctx.arc(w/2 + eyeXOffset, eyeY, eyeRadius, 0, Math.PI * 2);
@@ -98,28 +176,42 @@
         const mouthWidth = w * 0.12;
 
         ctx.beginPath();
-        switch (state.expression) {
-            case 'HAPPY':
-                ctx.arc(w/2, mouthY - h*0.02, mouthWidth, 0.1 * Math.PI, 0.9 * Math.PI);
-                ctx.stroke();
-                break;
-            case 'SAD':
-                ctx.arc(w/2, mouthY + h*0.05, mouthWidth, 1.1 * Math.PI, 1.9 * Math.PI);
-                ctx.stroke();
-                break;
-            case 'SURPRISED':
-                ctx.arc(w/2, mouthY, mouthWidth * 0.5, 0, Math.PI * 2);
-                ctx.fill();
-                break;
-            case 'ANGRY':
-                ctx.moveTo(w/2 - mouthWidth, mouthY);
-                ctx.lineTo(w/2 + mouthWidth, mouthY);
-                ctx.stroke();
-                break;
-            case 'SLEEPY':
-                ctx.arc(w/2, mouthY, mouthWidth * 0.3, 0, Math.PI * 2);
-                ctx.stroke();
-                break;
+        if (state.isTalking) {
+            // 講話中：嘴巴依音量節奏一開一合，形狀仍依當前表情微調寬度／位置
+            const t = performance.now();
+            // 混合兩個不同頻率的正弦波，讓開合節奏看起來比較自然、不呆板
+            const wave = Math.sin(t * 0.018) * 0.5 + Math.sin(t * 0.031) * 0.5;
+            const openness = 0.15 + Math.abs(wave) * 0.85; // 0.15 ~ 1.0
+            const baseY = state.expression === 'SAD' ? mouthY + h*0.03
+                        : state.expression === 'SLEEPY' ? mouthY
+                        : mouthY - h*0.01;
+            const mouthH = mouthWidth * 0.55 * openness;
+            ctx.ellipse(w/2, baseY, mouthWidth * 0.55, mouthH, 0, 0, Math.PI * 2);
+            ctx.fill();
+        } else {
+            switch (state.expression) {
+                case 'HAPPY':
+                    ctx.arc(w/2, mouthY - h*0.02, mouthWidth, 0.1 * Math.PI, 0.9 * Math.PI);
+                    ctx.stroke();
+                    break;
+                case 'SAD':
+                    ctx.arc(w/2, mouthY + h*0.05, mouthWidth, 1.1 * Math.PI, 1.9 * Math.PI);
+                    ctx.stroke();
+                    break;
+                case 'SURPRISED':
+                    ctx.arc(w/2, mouthY, mouthWidth * 0.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    break;
+                case 'ANGRY':
+                    ctx.moveTo(w/2 - mouthWidth, mouthY);
+                    ctx.lineTo(w/2 + mouthWidth, mouthY);
+                    ctx.stroke();
+                    break;
+                case 'SLEEPY':
+                    ctx.arc(w/2, mouthY, mouthWidth * 0.3, 0, Math.PI * 2);
+                    ctx.stroke();
+                    break;
+            }
         }
 
         requestAnimationFrame(drawBMO);
@@ -144,31 +236,122 @@
     // 【方式一：電腦鍵盤快捷鍵控制】
     window.addEventListener('keydown', (e) => {
         switch(e.key) {
-            case '1': setExpression('HAPPY'); break;     // 按數字 1：開心
-            case '2': setExpression('SAD'); break;       // 按數字 2：難過
-            case '3': setExpression('SURPRISED'); break; // 按數字 3：驚訝
-            case '4': setExpression('ANGRY'); break;     // 按數字 4：生氣
-            case '5': setExpression('SLEEPY'); break;    // 按數字 5：睡覺
-            case ' ': setExpression('HAPPY'); break;     // 空格鍵：恢復預設
+            case '1': setExpressionAndSpeak('HAPPY'); break;
+            case '2': setExpressionAndSpeak('SAD'); break;
+            case '3': setExpressionAndSpeak('SURPRISED'); break;
+            case '4': setExpressionAndSpeak('ANGRY'); break;
+            case '5': setExpressionAndSpeak('SLEEPY'); break;
+            case ' ': setExpressionAndSpeak('HAPPY'); break;
         }
     });
 
     // 【方式二：點擊螢幕/觸控切換】
-    // 每次點擊螢幕，自動輪播切換下一個表情
     const expressionsList = ['HAPPY', 'SURPRISED', 'SAD', 'ANGRY', 'SLEEPY'];
     let currentIndex = 0;
     canvas.addEventListener('click', () => {
         currentIndex = (currentIndex + 1) % expressionsList.length;
-        setExpression(expressionsList[currentIndex]);
+        setExpressionAndSpeak(expressionsList[currentIndex]);
     });
 
-    // 【方式三：供 ESP32-S3 / WebSocket 遠端控制呼叫】
+    // 【方式三：語音控制 (Web Speech API)】
+    // 支援中文與英文關鍵字，點擊右下角麥克風按鈕開始／停止聆聽
+    const voiceMap = [
+        { exp: 'HAPPY',     keywords: ['開心', '快樂', '高興', '笑', 'happy', 'smile'] },
+        { exp: 'SAD',       keywords: ['難過', '傷心', '哭', 'sad', 'cry'] },
+        { exp: 'SURPRISED', keywords: ['驚訝', '嚇', '驚', 'surprised', 'shock'] },
+        { exp: 'ANGRY',     keywords: ['生氣', '憤怒', 'angry', 'mad'] },
+        { exp: 'SLEEPY',    keywords: ['睡覺', '想睡', '累', 'sleepy', 'tired', 'sleep'] },
+    ];
+
+    function matchExpression(transcript) {
+        const text = transcript.toLowerCase();
+        for (const entry of voiceMap) {
+            for (const kw of entry.keywords) {
+                if (text.includes(kw.toLowerCase())) return entry.exp;
+            }
+        }
+        return null;
+    }
+
+    function showStatus(text, ms = 2200) {
+        statusEl.textContent = text;
+        statusEl.classList.add('show');
+        clearTimeout(showStatus._t);
+        showStatus._t = setTimeout(() => statusEl.classList.remove('show'), ms);
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition = null;
+    let isListening = false;
+
+    if (SpeechRecognition) {
+        recognition = new SpeechRecognition();
+        recognition.lang = 'zh-TW';       // 中文辨識；可自行改成 'en-US'
+        recognition.continuous = true;
+        recognition.interimResults = false;
+
+        recognition.onresult = (event) => {
+            const last = event.results[event.results.length - 1];
+            const transcript = last[0].transcript.trim();
+            const matched = matchExpression(transcript);
+            if (matched) {
+                setExpressionAndSpeak(matched);
+                showStatus(`聽到「${transcript}」→ ${matched}`);
+            } else {
+                showStatus(`聽到「${transcript}」（沒有對應表情）`);
+            }
+        };
+
+        recognition.onerror = (event) => {
+            showStatus('語音辨識錯誤：' + event.error);
+            stopListening();
+        };
+
+        recognition.onend = () => {
+            // 若使用者仍想聆聽，瀏覽器有時會自動中斷，重新啟動
+            if (isListening) {
+                try { recognition.start(); } catch (e) {}
+            }
+        };
+
+        micBtn.addEventListener('click', () => {
+            if (isListening) {
+                stopListening();
+            } else {
+                startListening();
+            }
+        });
+
+        function startListening() {
+            try {
+                recognition.start();
+                isListening = true;
+                micBtn.classList.add('listening');
+                showStatus('開始聆聽…請說出表情，例如「開心」「生氣」');
+            } catch (e) {
+                showStatus('無法啟動語音辨識：' + e.message);
+            }
+        }
+
+        function stopListening() {
+            isListening = false;
+            micBtn.classList.remove('listening');
+            try { recognition.stop(); } catch (e) {}
+            showStatus('已停止聆聽');
+        }
+    } else {
+        micBtn.addEventListener('click', () => {
+            showStatus('此瀏覽器不支援語音辨識，請改用 Chrome');
+        });
+    }
+
+    // 【方式四：供 ESP32-S3 / WebSocket 遠端控制呼叫】
     /*
     const ws = new WebSocket('ws://' + location.host + '/ws');
     ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
         if (data.expression) {
-            setExpression(data.expression); // 接收 ESP32 傳來的指令 (例: {"expression":"ANGRY"})
+            setExpression(data.expression);
         }
     };
     */
