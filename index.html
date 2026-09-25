@@ -1,530 +1,999 @@
+```html
 <!DOCTYPE html>
 <html lang="zh-TW">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BMO Face Web Edition</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            background-color: #80ceb9; /* BMO 經典青綠色背景 */
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            overflow: hidden;
-            user-select: none;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
-        }
-        canvas {
-            background-color: #80ceb9;
-        }
-        #micBtn {
-            position: fixed;
-            bottom: 24px;
-            right: 24px;
-            width: 56px;
-            height: 56px;
-            border-radius: 50%;
-            border: none;
-            background-color: #051d18;
-            color: #80ceb9;
-            font-size: 24px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-            transition: transform 0.15s ease, background-color 0.15s ease;
-            z-index: 10;
-        }
-        #micBtn.listening {
-            background-color: #d64545;
-            transform: scale(1.08);
-        }
-        #micBtn:active { transform: scale(0.95); }
-        #status {
-            position: fixed;
-            bottom: 32px;
-            right: 92px;
-            background: rgba(5,29,24,0.85);
-            color: #80ceb9;
-            padding: 8px 14px;
-            border-radius: 20px;
-            font-size: 13px;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            pointer-events: none;
-            max-width: 260px;
-        }
-        #status.show { opacity: 1; }
-        #hint {
-            position: fixed;
-            top: 16px;
-            left: 16px;
-            color: #051d18;
-            font-size: 12px;
-            opacity: 0.6;
-            line-height: 1.6;
-        }
-        #editBtn {
-            position: fixed;
-            bottom: 24px;
-            right: 92px;
-            width: 56px;
-            height: 56px;
-            border-radius: 50%;
-            border: none;
-            background-color: #051d18;
-            color: #80ceb9;
-            font-size: 22px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-            z-index: 10;
-        }
-        #editBtn:active { transform: scale(0.95); }
-        #editOverlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(5,29,24,0.55);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 20;
-        }
-        #editOverlay.show { display: flex; }
-        #editPanel {
-            background: #f4f1ea;
-            color: #051d18;
-            width: min(420px, 90vw);
-            max-height: 80vh;
-            border-radius: 16px;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.35);
-        }
-        #editPanel h2 { font-size: 16px; font-weight: 600; }
-        #editPanel p { font-size: 12px; opacity: 0.7; line-height: 1.6; }
-        #editPanel select {
-            font-size: 14px;
-            padding: 8px 10px;
-            border-radius: 8px;
-            border: 1px solid #ccc4b5;
-            background: #fff;
-        }
-        #editPanel textarea {
-            font-size: 14px;
-            padding: 10px;
-            border-radius: 8px;
-            border: 1px solid #ccc4b5;
-            resize: vertical;
-            min-height: 140px;
-            line-height: 1.6;
-            font-family: inherit;
-        }
-        #editPanel .row { display: flex; gap: 8px; justify-content: flex-end; }
-        #editPanel button.action {
-            font-size: 13px;
-            padding: 8px 16px;
-            border-radius: 8px;
-            border: none;
-            cursor: pointer;
-        }
-        #editPanel button.save { background: #051d18; color: #80ceb9; }
-        #editPanel button.reset { background: transparent; color: #051d18; text-decoration: underline; }
-        #editPanel button.close { background: #ddd6c8; color: #051d18; }
-    </style>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+  >
+
+  <meta name="theme-color" content="#38b7a5">
+
+  <title>陪伴機器人</title>
+
+  <style>
+
+    /* =====================================================
+       基本設定
+    ===================================================== */
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+
+      overflow: hidden;
+
+      background: #000;
+
+      font-family:
+        Arial,
+        "Noto Sans TC",
+        sans-serif;
+    }
+
+    body {
+      width: 100vw;
+      height: 100vh;
+
+      width: 100dvw;
+      height: 100dvh;
+    }
+
+
+    /* =====================================================
+       機器人面部
+       100% 全螢幕
+    ===================================================== */
+
+    #robot {
+
+      position: fixed;
+
+      left: 0;
+      top: 0;
+
+      width: 100vw;
+      height: 100vh;
+
+      width: 100dvw;
+      height: 100dvh;
+
+      overflow: hidden;
+
+      background: #38b7a5;
+
+      border: 0;
+
+      border-radius: 0;
+
+      box-shadow: none;
+
+      transition:
+        background-color 300ms ease;
+    }
+
+
+    /* =====================================================
+       頂部指示燈
+    ===================================================== */
+
+    .status-light {
+
+      position: absolute;
+
+      top: 3.5%;
+      left: 50%;
+
+      width: clamp(10px, 2vw, 24px);
+      height: clamp(10px, 2vw, 24px);
+
+      transform: translateX(-50%);
+
+      border-radius: 50%;
+
+      background: #d8fff8;
+
+      box-shadow:
+        0 0 20px rgba(216, 255, 248, 0.9);
+
+      animation:
+        lightPulse 2.2s ease-in-out infinite;
+
+      z-index: 10;
+    }
+
+
+    @keyframes lightPulse {
+
+      0%,
+      100% {
+        opacity: 0.55;
+
+        transform:
+          translateX(-50%)
+          scale(0.85);
+      }
+
+      50% {
+        opacity: 1;
+
+        transform:
+          translateX(-50%)
+          scale(1.15);
+      }
+
+    }
+
+
+    /* =====================================================
+       眼睛區域
+    ===================================================== */
+
+    .eyes {
+
+      position: absolute;
+
+      left: 50%;
+      top: 28%;
+
+      width: 62%;
+      height: 26%;
+
+      transform: translateX(-50%);
+
+      display: flex;
+
+      justify-content: space-between;
+      align-items: center;
+    }
+
+
+    /* =====================================================
+       眼睛
+    ===================================================== */
+
+    .eye {
+
+      width: 19%;
+      height: 78%;
+
+      background: #102c2d;
+
+      border-radius: 38%;
+
+      transform-origin: center;
+
+      transition:
+        width 220ms ease,
+        height 220ms ease,
+        border-radius 220ms ease,
+        transform 220ms ease;
+    }
+
+
+    /* =====================================================
+       眨眼
+    ===================================================== */
+
+    #robot.blinking .eye {
+
+      height: 8%;
+
+      border-radius: 999px;
+    }
+
+
+    /* =====================================================
+       嘴巴區域
+    ===================================================== */
+
+    .mouth-area {
+
+      position: absolute;
+
+      left: 50%;
+      top: 59%;
+
+      width: 36%;
+      height: 25%;
+
+      transform: translateX(-50%);
+
+      display: flex;
+
+      justify-content: center;
+      align-items: center;
+    }
+
+
+    /* =====================================================
+       嘴巴
+    ===================================================== */
+
+    #mouth {
+
+      width: 52%;
+      height: 8%;
+
+      background: #102c2d;
+
+      border-radius: 999px;
+
+      transform-origin: center;
+
+      transition:
+        width 220ms ease,
+        height 220ms ease,
+        border 220ms ease,
+        border-radius 220ms ease,
+        transform 120ms ease;
+    }
+
+
+    /* =====================================================
+       NEUTRAL
+    ===================================================== */
+
+    #robot.neutral #mouth {
+
+      width: 52%;
+      height: 8%;
+
+      background: #102c2d;
+
+      border: 0;
+
+      border-radius: 999px;
+    }
+
+
+    /* =====================================================
+       HAPPY
+    ===================================================== */
+
+    #robot.happy .eye {
+
+      height: 38%;
+
+      border-radius: 999px;
+    }
+
+
+    #robot.happy .eye.left {
+
+      transform: rotate(10deg);
+    }
+
+
+    #robot.happy .eye.right {
+
+      transform: rotate(-10deg);
+    }
+
+
+    #robot.happy #mouth {
+
+      width: 60%;
+      height: 40%;
+
+      background: transparent;
+
+      border: clamp(4px, 0.7vw, 9px)
+        solid #102c2d;
+
+      border-top: 0;
+
+      border-radius:
+        0 0 999px 999px;
+    }
+
+
+    /* =====================================================
+       SAD
+    ===================================================== */
+
+    #robot.sad .eye.left {
+
+      transform: rotate(18deg);
+    }
+
+
+    #robot.sad .eye.right {
+
+      transform: rotate(-18deg);
+    }
+
+
+    #robot.sad #mouth {
+
+      width: 55%;
+      height: 34%;
+
+      background: transparent;
+
+      border: clamp(4px, 0.7vw, 9px)
+        solid #102c2d;
+
+      border-bottom: 0;
+
+      border-radius:
+        999px 999px 0 0;
+    }
+
+
+    /* =====================================================
+       ANGRY
+    ===================================================== */
+
+    #robot.angry .eye.left {
+
+      transform: rotate(-18deg);
+    }
+
+
+    #robot.angry .eye.right {
+
+      transform: rotate(18deg);
+    }
+
+
+    #robot.angry #mouth {
+
+      width: 55%;
+      height: 22%;
+
+      background: transparent;
+
+      border:
+        clamp(4px, 0.7vw, 9px)
+        solid #102c2d;
+
+      border-radius: 25px;
+    }
+
+
+    /* =====================================================
+       SURPRISED
+    ===================================================== */
+
+    #robot.surprised .eye {
+
+      width: 24%;
+      height: 90%;
+
+      border-radius: 50%;
+    }
+
+
+    #robot.surprised #mouth {
+
+      width: 25%;
+      height: 48%;
+
+      background: transparent;
+
+      border:
+        clamp(4px, 0.7vw, 9px)
+        solid #102c2d;
+
+      border-radius: 50%;
+    }
+
+
+    /* =====================================================
+       THINKING
+    ===================================================== */
+
+    #robot.thinking .eye {
+
+      animation:
+        thinkingEyes
+        1.5s
+        ease-in-out
+        infinite;
+    }
+
+
+    #robot.thinking #mouth {
+
+      width: 35%;
+      height: 20%;
+
+      background: transparent;
+
+      border:
+        clamp(4px, 0.7vw, 9px)
+        solid #102c2d;
+
+      border-radius: 50%;
+    }
+
+
+    @keyframes thinkingEyes {
+
+      0%,
+      100% {
+        transform: translateX(0);
+      }
+
+      50% {
+        transform: translateX(12px);
+      }
+
+    }
+
+
+    /* =====================================================
+       LISTENING
+    ===================================================== */
+
+    #robot.listening .eye {
+
+      animation:
+        listeningPulse
+        900ms
+        ease-in-out
+        infinite
+        alternate;
+    }
+
+
+    @keyframes listeningPulse {
+
+      from {
+        transform: scale(0.93);
+      }
+
+      to {
+        transform: scale(1.07);
+      }
+
+    }
+
+
+    /* =====================================================
+       SLEEPY
+    ===================================================== */
+
+    #robot.sleepy .eye {
+
+      height: 10%;
+
+      border-radius: 999px;
+    }
+
+
+    #robot.sleepy #mouth {
+
+      width: 38%;
+      height: 7%;
+
+      background: #102c2d;
+
+      border: 0;
+
+      border-radius: 999px;
+    }
+
+
+    /* =====================================================
+       嘴巴說話動畫
+    ===================================================== */
+
+    #robot.speaking #mouth {
+
+      animation:
+        mouthTalk
+        180ms
+        ease-in-out
+        infinite
+        alternate;
+    }
+
+
+    @keyframes mouthTalk {
+
+      from {
+
+        transform:
+          scale(0.82, 0.65);
+      }
+
+      to {
+
+        transform:
+          scale(1.08, 1.15);
+      }
+
+    }
+
+
+    /* =====================================================
+       說話時眼睛輕微動
+    ===================================================== */
+
+    #robot.speaking .eye {
+
+      animation:
+        speakingEyes
+        1.8s
+        ease-in-out
+        infinite;
+    }
+
+
+    @keyframes speakingEyes {
+
+      0%,
+      100% {
+        transform: translateY(0);
+      }
+
+      50% {
+        transform: translateY(-2px);
+      }
+
+    }
+
+
+    /* =====================================================
+       手機 / 平板 / 電腦全部全螢幕
+    ===================================================== */
+
+    @media screen {
+
+      html,
+      body,
+      #robot {
+
+        width: 100vw;
+        height: 100vh;
+
+        width: 100dvw;
+        height: 100dvh;
+      }
+
+    }
+
+
+    /* =====================================================
+       減少動畫設定
+    ===================================================== */
+
+    @media (prefers-reduced-motion: reduce) {
+
+      *,
+      *::before,
+      *::after {
+
+        animation: none !important;
+
+        transition: none !important;
+      }
+
+    }
+
+  </style>
+
 </head>
+
+
 <body>
 
-<canvas id="bmoCanvas"></canvas>
-<div id="hint">鍵盤 1-5 切換表情 ／ 點擊畫面輪播 ／ 按右下角麥克風說話（切換時 BMO 會開口說話，嘴巴會動）</div>
-<div id="status"></div>
-<button id="micBtn" title="語音控制">🎤</button>
-<button id="editBtn" title="編輯台詞">📝</button>
 
-<div id="editOverlay">
-    <div id="editPanel">
-        <h2>編輯 BMO 的台詞</h2>
-        <p>每個表情可以放好幾句話，BMO 每次講話會隨機挑一句，不會老是講同一句。一行一句。</p>
-        <select id="expSelect">
-            <option value="HAPPY">開心 HAPPY</option>
-            <option value="SAD">難過 SAD</option>
-            <option value="SURPRISED">驚訝 SURPRISED</option>
-            <option value="ANGRY">生氣 ANGRY</option>
-            <option value="SLEEPY">睡覺 SLEEPY</option>
-        </select>
-        <textarea id="phraseText"></textarea>
-        <div class="row">
-            <button class="action reset" id="resetBtn">恢復預設</button>
-            <button class="action close" id="closeBtn">取消</button>
-            <button class="action save" id="saveBtn">儲存</button>
-        </div>
+  <!-- =====================================================
+       機器人臉
+  ===================================================== -->
+
+  <main
+    id="robot"
+    class="neutral"
+    aria-label="陪伴機器人"
+  >
+
+
+    <!-- 眼睛 -->
+
+    <div
+      class="eyes"
+      aria-hidden="true"
+    >
+
+      <div class="eye left"></div>
+
+      <div class="eye right"></div>
+
     </div>
-</div>
 
-<script>
-    const canvas = document.getElementById('bmoCanvas');
-    const ctx = canvas.getContext('2d');
-    const micBtn = document.getElementById('micBtn');
-    const statusEl = document.getElementById('status');
 
-    function resizeCanvas() {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-    }
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
+    <!-- 嘴巴 -->
 
-    // 核心狀態管理
-    let state = {
-        isBlinking: false,
-        isTalking: false,   // 講話中，嘴巴會動
-        expression: 'HAPPY' // 可切換：HAPPY, SAD, SURPRISED, ANGRY, SLEEPY
-    };
+    <div
+      class="mouth-area"
+      aria-hidden="true"
+    >
 
-    // 切換表情的核心函式
-    function setExpression(expName) {
-        state.expression = expName;
-        console.log("Current Expression:", state.expression);
-    }
+      <div id="mouth"></div>
 
-    // 講話功能：BMO 開口說話時嘴巴會動，說完自動恢復原本表情的嘴型
-    // 每個表情準備多句台詞，每次講話隨機挑一句，使用者也可以按📝自己編輯／新增
-    const defaultPhrases = {
-        HAPPY: [
-            '我很開心！', '今天心情超好的！', '耶～超棒的！',
-            '嘿嘿，開心開心！', '有你在真好！'
-        ],
-        SAD: [
-            '我好難過…', '嗚…心情不太好…', '有點難過耶…',
-            '不要看我啦…', '我需要抱抱…'
-        ],
-        SURPRISED: [
-            '哇！嚇我一跳！', '什麼？！真的假的！', '咦？！',
-            '太意外了吧！', '哇喔，沒想到！'
-        ],
-        ANGRY: [
-            '哼！我生氣了！', '真是夠了！', '不要惹我！',
-            '氣死我了！', '哼哼，不理你了！'
-        ],
-        SLEEPY: [
-            '好想睡覺喔…', '眼皮好重…', '讓我瞇一下…',
-            '晚安，我要睡了…', '好睏喔…'
-        ]
-    };
+    </div>
 
-    let phrasePool = loadPhrases();
 
-    function loadPhrases() {
-        try {
-            const saved = localStorage.getItem('bmo_phrases');
-            if (saved) {
-                const parsed = JSON.parse(saved);
-                // 確保每個表情都至少有預設值，避免使用者存了不完整資料
-                return Object.assign({}, defaultPhrases, parsed);
-            }
-        } catch (e) {}
-        return JSON.parse(JSON.stringify(defaultPhrases));
-    }
+  </main>
 
-    function savePhrases() {
-        try { localStorage.setItem('bmo_phrases', JSON.stringify(phrasePool)); }
-        catch (e) {}
-    }
 
-    function pickPhrase(expName) {
-        const list = (phrasePool[expName] && phrasePool[expName].length)
-            ? phrasePool[expName] : defaultPhrases[expName];
-        return list[Math.floor(Math.random() * list.length)];
-    }
+  <script>
 
-    function speak(text) {
-        if (!('speechSynthesis' in window) || !text) return;
-        window.speechSynthesis.cancel(); // 避免重疊講話
-        const utter = new SpeechSynthesisUtterance(text);
-        utter.lang = 'zh-TW';
-        utter.rate = 1;
-        utter.onstart = () => { state.isTalking = true; };
-        utter.onend = () => { state.isTalking = false; };
-        utter.onerror = () => { state.isTalking = false; };
-        window.speechSynthesis.speak(utter);
-    }
+    "use strict";
 
-    // 切換表情同時開口說話（隨機挑一句台詞）
-    function setExpressionAndSpeak(expName) {
-        setExpression(expName);
-        speak(pickPhrase(expName));
-    }
 
-    // ===== 編輯台詞面板 =====
-    const editBtn = document.getElementById('editBtn');
-    const editOverlay = document.getElementById('editOverlay');
-    const expSelect = document.getElementById('expSelect');
-    const phraseText = document.getElementById('phraseText');
-    const saveBtn = document.getElementById('saveBtn');
-    const resetBtn = document.getElementById('resetBtn');
-    const closeBtn = document.getElementById('closeBtn');
+    /* =====================================================
+       DOM
+    ===================================================== */
 
-    function loadTextareaFor(expName) {
-        const list = (phrasePool[expName] && phrasePool[expName].length)
-            ? phrasePool[expName] : defaultPhrases[expName];
-        phraseText.value = list.join('\n');
-    }
+    const robot =
+      document.getElementById("robot");
 
-    editBtn.addEventListener('click', () => {
-        loadTextareaFor(expSelect.value);
-        editOverlay.classList.add('show');
-    });
-    closeBtn.addEventListener('click', () => editOverlay.classList.remove('show'));
-    expSelect.addEventListener('change', () => loadTextareaFor(expSelect.value));
 
-    saveBtn.addEventListener('click', () => {
-        const lines = phraseText.value.split('\n').map(s => s.trim()).filter(Boolean);
-        phrasePool[expSelect.value] = lines.length ? lines : defaultPhrases[expSelect.value].slice();
-        savePhrases();
-        showStatus('台詞已儲存！');
-        editOverlay.classList.remove('show');
-    });
+    /* =====================================================
+       Gemini 可以使用的表情
+    ===================================================== */
 
-    resetBtn.addEventListener('click', () => {
-        phrasePool[expSelect.value] = defaultPhrases[expSelect.value].slice();
-        savePhrases();
-        loadTextareaFor(expSelect.value);
-        showStatus('已恢復這個表情的預設台詞');
-    });
+    const EMOTIONS = [
 
-    // 繪製 BMO 臉部
-    function drawBMO() {
-        const w = canvas.width;
-        const h = canvas.height;
-        ctx.clearRect(0, 0, w, h);
+      "neutral",
+      "happy",
+      "sad",
+      "angry",
+      "surprised",
+      "thinking",
+      "listening",
+      "sleepy"
 
-        ctx.fillStyle = '#051d18';
-        ctx.strokeStyle = '#051d18';
-        ctx.lineWidth = w * 0.012;
-        ctx.lineCap = 'round';
-
-        const eyeRadius = w * 0.035;
-        const eyeXOffset = w * 0.18;
-        const eyeY = h * 0.42;
-
-        // 1. 眼睛繪製
-        if (state.isBlinking || state.expression === 'SLEEPY') {
-            ctx.beginPath();
-            ctx.moveTo(w/2 - eyeXOffset - eyeRadius, eyeY);
-            ctx.lineTo(w/2 - eyeXOffset + eyeRadius, eyeY);
-            ctx.moveTo(w/2 + eyeXOffset - eyeRadius, eyeY);
-            ctx.lineTo(w/2 + eyeXOffset + eyeRadius, eyeY);
-            ctx.stroke();
-        } else if (state.expression === 'ANGRY') {
-            ctx.beginPath();
-            ctx.arc(w/2 - eyeXOffset, eyeY, eyeRadius, 0, Math.PI * 2);
-            ctx.arc(w/2 + eyeXOffset, eyeY, eyeRadius, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.beginPath();
-            ctx.moveTo(w/2 - eyeXOffset - eyeRadius, eyeY - eyeRadius * 1.5);
-            ctx.lineTo(w/2 - eyeXOffset + eyeRadius, eyeY - eyeRadius * 0.5);
-            ctx.moveTo(w/2 + eyeXOffset + eyeRadius, eyeY - eyeRadius * 1.5);
-            ctx.lineTo(w/2 + eyeXOffset - eyeRadius, eyeY - eyeRadius * 0.5);
-            ctx.stroke();
-        } else {
-            ctx.beginPath();
-            ctx.arc(w/2 - eyeXOffset, eyeY, eyeRadius, 0, Math.PI * 2);
-            ctx.arc(w/2 + eyeXOffset, eyeY, eyeRadius, 0, Math.PI * 2);
-            ctx.fill();
-        }
-
-        // 2. 嘴巴繪製
-        const mouthY = h * 0.58;
-        const mouthWidth = w * 0.12;
-
-        ctx.beginPath();
-        if (state.isTalking) {
-            // 講話中：嘴巴依音量節奏一開一合，形狀仍依當前表情微調寬度／位置
-            const t = performance.now();
-            // 混合兩個不同頻率的正弦波，讓開合節奏看起來比較自然、不呆板
-            const wave = Math.sin(t * 0.018) * 0.5 + Math.sin(t * 0.031) * 0.5;
-            const openness = 0.15 + Math.abs(wave) * 0.85; // 0.15 ~ 1.0
-            const baseY = state.expression === 'SAD' ? mouthY + h*0.03
-                        : state.expression === 'SLEEPY' ? mouthY
-                        : mouthY - h*0.01;
-            const mouthH = mouthWidth * 0.55 * openness;
-            ctx.ellipse(w/2, baseY, mouthWidth * 0.55, mouthH, 0, 0, Math.PI * 2);
-            ctx.fill();
-        } else {
-            switch (state.expression) {
-                case 'HAPPY':
-                    ctx.arc(w/2, mouthY - h*0.02, mouthWidth, 0.1 * Math.PI, 0.9 * Math.PI);
-                    ctx.stroke();
-                    break;
-                case 'SAD':
-                    ctx.arc(w/2, mouthY + h*0.05, mouthWidth, 1.1 * Math.PI, 1.9 * Math.PI);
-                    ctx.stroke();
-                    break;
-                case 'SURPRISED':
-                    ctx.arc(w/2, mouthY, mouthWidth * 0.5, 0, Math.PI * 2);
-                    ctx.fill();
-                    break;
-                case 'ANGRY':
-                    ctx.moveTo(w/2 - mouthWidth, mouthY);
-                    ctx.lineTo(w/2 + mouthWidth, mouthY);
-                    ctx.stroke();
-                    break;
-                case 'SLEEPY':
-                    ctx.arc(w/2, mouthY, mouthWidth * 0.3, 0, Math.PI * 2);
-                    ctx.stroke();
-                    break;
-            }
-        }
-
-        requestAnimationFrame(drawBMO);
-    }
-
-    // 自動眨眼計時器
-    function triggerBlink() {
-        if (state.expression !== 'SLEEPY') {
-            state.isBlinking = true;
-            setTimeout(() => { state.isBlinking = false; }, 150);
-        }
-        setTimeout(triggerBlink, Math.random() * 3000 + 2000);
-    }
-
-    drawBMO();
-    triggerBlink();
-
-    // ==========================================
-    // 改變表情的方式 (Ways to Change Expressions)
-    // ==========================================
-
-    // 【方式一：電腦鍵盤快捷鍵控制】
-    window.addEventListener('keydown', (e) => {
-        switch(e.key) {
-            case '1': setExpressionAndSpeak('HAPPY'); break;
-            case '2': setExpressionAndSpeak('SAD'); break;
-            case '3': setExpressionAndSpeak('SURPRISED'); break;
-            case '4': setExpressionAndSpeak('ANGRY'); break;
-            case '5': setExpressionAndSpeak('SLEEPY'); break;
-            case ' ': setExpressionAndSpeak('HAPPY'); break;
-        }
-    });
-
-    // 【方式二：點擊螢幕/觸控切換】
-    const expressionsList = ['HAPPY', 'SURPRISED', 'SAD', 'ANGRY', 'SLEEPY'];
-    let currentIndex = 0;
-    canvas.addEventListener('click', () => {
-        currentIndex = (currentIndex + 1) % expressionsList.length;
-        setExpressionAndSpeak(expressionsList[currentIndex]);
-    });
-
-    // 【方式三：語音控制 (Web Speech API)】
-    // 支援中文與英文關鍵字，點擊右下角麥克風按鈕開始／停止聆聽
-    const voiceMap = [
-        { exp: 'HAPPY',     keywords: ['開心', '快樂', '高興', '笑', 'happy', 'smile'] },
-        { exp: 'SAD',       keywords: ['難過', '傷心', '哭', 'sad', 'cry'] },
-        { exp: 'SURPRISED', keywords: ['驚訝', '嚇', '驚', 'surprised', 'shock'] },
-        { exp: 'ANGRY',     keywords: ['生氣', '憤怒', 'angry', 'mad'] },
-        { exp: 'SLEEPY',    keywords: ['睡覺', '想睡', '累', 'sleepy', 'tired', 'sleep'] },
     ];
 
-    function matchExpression(transcript) {
-        const text = transcript.toLowerCase();
-        for (const entry of voiceMap) {
-            for (const kw of entry.keywords) {
-                if (text.includes(kw.toLowerCase())) return entry.exp;
-            }
+
+    let currentEmotion =
+      "neutral";
+
+
+    let isSpeaking =
+      false;
+
+
+    let blinkTimer =
+      null;
+
+
+    let blinkInProgress =
+      false;
+
+
+    /* =====================================================
+       改變表情
+       
+       Gemini 之後可以直接：
+
+       setEmotion("happy");
+
+       setEmotion("sad");
+
+       setEmotion("thinking");
+    ===================================================== */
+
+    function setEmotion(emotion) {
+
+      if (
+        typeof emotion !== "string"
+      ) {
+
+        emotion = "neutral";
+      }
+
+
+      emotion =
+        emotion
+          .toLowerCase()
+          .trim();
+
+
+      if (
+        !EMOTIONS.includes(emotion)
+      ) {
+
+        emotion = "neutral";
+      }
+
+
+      /* 移除舊表情 */
+
+      EMOTIONS.forEach(
+        (name) => {
+
+          robot.classList.remove(
+            name
+          );
+
         }
-        return null;
+      );
+
+
+      /* 套用新表情 */
+
+      robot.classList.add(
+        emotion
+      );
+
+
+      /* 記錄目前表情 */
+
+      currentEmotion =
+        emotion;
     }
 
-    function showStatus(text, ms = 2200) {
-        statusEl.textContent = text;
-        statusEl.classList.add('show');
-        clearTimeout(showStatus._t);
-        showStatus._t = setTimeout(() => statusEl.classList.remove('show'), ms);
+
+    /* =====================================================
+       控制說話嘴巴
+
+       true：
+       開始說話
+
+       false：
+       停止說話
+    ===================================================== */
+
+    function setSpeaking(speaking) {
+
+      isSpeaking =
+        Boolean(speaking);
+
+
+      robot.classList.toggle(
+        "speaking",
+        isSpeaking
+      );
     }
 
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    let recognition = null;
-    let isListening = false;
 
-    if (SpeechRecognition) {
-        recognition = new SpeechRecognition();
-        recognition.lang = 'zh-TW';       // 中文辨識；可自行改成 'en-US'
-        recognition.continuous = true;
-        recognition.interimResults = false;
+    /* =====================================================
+       眨眼
+    ===================================================== */
 
-        recognition.onresult = (event) => {
-            const last = event.results[event.results.length - 1];
-            const transcript = last[0].transcript.trim();
-            const matched = matchExpression(transcript);
-            if (matched) {
-                setExpressionAndSpeak(matched);
-                showStatus(`聽到「${transcript}」→ ${matched}`);
-            } else {
-                showStatus(`聽到「${transcript}」（沒有對應表情）`);
-            }
-        };
+    function blink() {
 
-        recognition.onerror = (event) => {
-            showStatus('語音辨識錯誤：' + event.error);
-            stopListening();
-        };
+      if (
+        blinkInProgress
+      ) {
 
-        recognition.onend = () => {
-            // 若使用者仍想聆聽，瀏覽器有時會自動中斷，重新啟動
-            if (isListening) {
-                try { recognition.start(); } catch (e) {}
-            }
-        };
+        return;
+      }
 
-        micBtn.addEventListener('click', () => {
-            if (isListening) {
-                stopListening();
-            } else {
-                startListening();
-            }
-        });
 
-        function startListening() {
-            try {
-                recognition.start();
-                isListening = true;
-                micBtn.classList.add('listening');
-                showStatus('開始聆聽…請說出表情，例如「開心」「生氣」');
-            } catch (e) {
-                showStatus('無法啟動語音辨識：' + e.message);
-            }
-        }
+      blinkInProgress =
+        true;
 
-        function stopListening() {
-            isListening = false;
-            micBtn.classList.remove('listening');
-            try { recognition.stop(); } catch (e) {}
-            showStatus('已停止聆聽');
-        }
-    } else {
-        micBtn.addEventListener('click', () => {
-            showStatus('此瀏覽器不支援語音辨識，請改用 Chrome');
-        });
+
+      robot.classList.add(
+        "blinking"
+      );
+
+
+      window.setTimeout(
+        () => {
+
+          robot.classList.remove(
+            "blinking"
+          );
+
+
+          blinkInProgress =
+            false;
+
+        },
+        170
+      );
     }
 
-    // 【方式四：供 ESP32-S3 / WebSocket 遠端控制呼叫】
-    /*
-    const ws = new WebSocket('ws://' + location.host + '/ws');
-    ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        if (data.expression) {
-            setExpression(data.expression);
+
+    /* =====================================================
+       自動眨眼
+    ===================================================== */
+
+    function scheduleBlink() {
+
+      const delay =
+        2500 +
+        Math.random() * 3500;
+
+
+      blinkTimer =
+        window.setTimeout(
+          () => {
+
+
+            if (
+              !isSpeaking &&
+              currentEmotion !==
+              "sleepy"
+            ) {
+
+              blink();
+            }
+
+
+            scheduleBlink();
+
+
+          },
+          delay
+        );
+    }
+
+
+    /* =====================================================
+       Gemini 回覆
+
+       Gemini 之後回傳：
+
+       {
+         "reply": "太棒了！",
+         "emotion": "happy"
+       }
+
+       就可以：
+
+       receiveGeminiResponse(data);
+    ===================================================== */
+
+    function receiveGeminiResponse(data) {
+
+      if (
+        !data ||
+        typeof data !== "object"
+      ) {
+
+        return;
+      }
+
+
+      /* 取得 Gemini 的情緒 */
+
+      if (
+        typeof data.emotion ===
+        "string"
+      ) {
+
+        setEmotion(
+          data.emotion
+        );
+      }
+
+
+      /* 取得 Gemini 的文字 */
+
+      if (
+        typeof data.reply ===
+        "string"
+      ) {
+
+        console.log(
+          "Gemini：",
+          data.reply
+        );
+      }
+
+
+      /* 如果同時收到 speaking */
+
+      if (
+        typeof data.speaking ===
+        "boolean"
+      ) {
+
+        setSpeaking(
+          data.speaking
+        );
+      }
+
+    }
+
+
+    /* =====================================================
+       ESP32 / WebSocket 控制介面
+
+       之後 ESP32 可以讓網站執行：
+
+       robotControl({
+         emotion: "happy",
+         speaking: true
+       });
+    ===================================================== */
+
+    window.robotControl =
+      function(data) {
+
+        if (
+          !data ||
+          typeof data !== "object"
+        ) {
+
+          return;
         }
-    };
-    */
-</script>
+
+
+        /* 表情 */
+
+        if (
+          typeof data.emotion ===
+          "string"
+        ) {
+
+          setEmotion(
+            data.emotion
+          );
+        }
+
+
+        /* 嘴巴 */
+
+        if (
+          typeof data.speaking ===
+          "boolean"
+        ) {
+
+          setSpeaking(
+            data.speaking
+          );
+        }
+
+      };
+
+
+    /* =====================================================
+       初始化
+    ===================================================== */
+
+    setEmotion("neutral");
+
+    setSpeaking(false);
+
+    scheduleBlink();
+
+
+    /* =====================================================
+       清除計時器
+    ===================================================== */
+
+    window.addEventListener(
+      "beforeunload",
+      () => {
+
+        if (
+          blinkTimer !== null
+        ) {
+
+          window.clearTimeout(
+            blinkTimer
+          );
+
+        }
+
+      }
+    );
+
+  </script>
+
 </body>
+
 </html>
