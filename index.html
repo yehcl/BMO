@@ -993,7 +993,39 @@
     );
 
   </script>
+<script>
+    // ===== BMO WebSocket =====
+    const bmoSocket = new WebSocket("ws://10.145.103.178:81");
 
+    bmoSocket.onopen = () => {
+        console.log("BMO WebSocket 連線成功");
+    };
+
+    bmoSocket.onmessage = (event) => {
+        const expression = event.data.trim();
+        const robot = document.getElementById("robot");
+
+        console.log("收到 ESP32:", expression);
+
+        if (expression === "happy") {
+            robot.className = "happy";
+            console.log("BMO → HAPPY");
+        }
+
+        if (expression === "sad") {
+            robot.className = "sad";
+            console.log("BMO → SAD");
+        }
+    };
+
+    bmoSocket.onerror = (error) => {
+        console.log("WebSocket 錯誤:", error);
+    };
+
+    bmoSocket.onclose = () => {
+        console.log("WebSocket 連線關閉");
+    };
+</script>
 </body>
 
 </html>
