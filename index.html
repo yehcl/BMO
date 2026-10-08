@@ -994,7 +994,7 @@
 
   </script>
 <script>
-const bmoSocket = new WebSocket("ws://10.145.103.178:81");
+const bmoSocket = new WebSocket("ws://192.168.0.216:81");
 
 bmoSocket.onopen = () => {
     console.log("BMO WebSocket 連線成功");
@@ -1005,7 +1005,7 @@ bmoSocket.onmessage = (event) => {
     const robot = document.getElementById("robot");
 
     console.log("收到 ESP32:", expression);
-
+機
     if (
         expression === "neutral" ||
         expression === "happy" ||
